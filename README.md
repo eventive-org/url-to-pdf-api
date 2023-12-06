@@ -54,11 +54,17 @@ and requests are direct connections to it.
 
 * Heavy pages may cause Chrome to crash if the server doesn't have enough RAM.
 
+* Docker image for this can be found here: https://github.com/restorecommerce/pdf-rendering-srv
+
 
 ## Examples
 
-*Note: the demo Heroku app runs on a free dyno which sleep after idle.
-A request to sleeping dyno may take even 30 seconds.*
+**⚠️ Restrictions ⚠️:**
+
+* For security reasons the urls have been restricted and HTML rendering is disabled. For full demo, run this app locally or deploy to Heroku.
+* The demo Heroku app runs on a free dyno which sleep after idle. A request to sleeping dyno may take even 30 seconds.
+
+
 
 **The most minimal example, render google.com**
 
@@ -93,34 +99,43 @@ https://url-to-pdf-api.herokuapp.com/api/render?url=http://google.com&pdf.margin
 
 https://url-to-pdf-api.herokuapp.com/api/render?url=http://google.com&waitFor=1000
 
-**Wait for an element macthing the selector `input` appears.**
+
+**Download the PDF with a given attachment name**
+
+https://url-to-pdf-api.herokuapp.com/api/render?url=http://google.com&attachmentName=google.pdf
+
+**Wait for an element matching the selector `input` appears.**
 
 https://url-to-pdf-api.herokuapp.com/api/render?url=http://google.com&waitFor=input
 
 **Render HTML sent in JSON body**
 
+*NOTE: Demo app has disabled html rendering for security reasons.*
+
 ```bash
-curl -o html.pdf -XPOST -d'{"html": "<body>test</body>"}' -H"content-type: application/json" https://url-to-pdf-api.herokuapp.com/api/render
+curl -o html.pdf -XPOST -d'{"html": "<body>test</body>"}' -H"content-type: application/json" http://localhost:9000/api/render
 ```
 
 **Render HTML sent as text body**
 
+*NOTE: Demo app has disabled html rendering for security reasons.*
+
 ```bash
-curl -o html.pdf -XPOST -d@page.html -H"content-type: text/html" https://url-to-pdf-api.herokuapp.com/api/render
+curl -o html.pdf -XPOST -d@test/resources/large.html -H"content-type: text/html" http://localhost:9000/api/render
 ```
 
 ## API
 
 To understand the API options, it's useful to know how [Puppeteer](https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md)
-is internally used by this API. The [render code](https://github.com/alvarcarto/url-to-pdf-api/blob/master/src/core/pdf-core.js#L26)
-is really simple, check it out. Render flow:
+is internally used by this API. The [render code](https://github.com/alvarcarto/url-to-pdf-api/blob/master/src/core/render-core.js)
+is quite simple, check it out. Render flow:
 
 1. **`page.setViewport(options)`** where options matches `viewport.*`.
 2. *Possibly* **`page.emulateMedia('screen')`** if `emulateScreenMedia=true` is set.
 3. Render url **or** html.
 
     If `url` is defined, **`page.goto(url, options)`** is called and options match `goto.*`.
-    Otherwise **``page.goto(`data:text/html,${html}`, options)``** is called where html is taken from request body. This workaround was found from [Puppeteer issue](https://github.com/GoogleChrome/puppeteer/issues/728).
+    Otherwise **`page.setContent(html, options)`** is called where html is taken from request body, and options match `goto.*`.
 
 4. *Possibly* **`page.waitFor(numOrStr)`** if e.g. `waitFor=1000` is set.
 5. *Possibly* **Scroll the whole page** to the end before rendering if e.g. `scrollPage=true` is set.
@@ -146,11 +161,13 @@ The only required parameter is `url`.
 Parameter | Type | Default | Description
 ----------|------|---------|------------
 url | string | - | URL to render as PDF. (required)
-output | string | pdf | Specify the output format. Possible values: `pdf` or `screenshot`.
+output | string | pdf | Specify the output format. Possible values: `pdf` , `screenshot` or `html`.
 emulateScreenMedia | boolean | `true` | Emulates `@media screen` when rendering the PDF.
+enableGPU | boolean | `false` | When set, enables chrome GPU. For windows user, this will always return false. See https://developers.google.com/web/updates/2017/04/headless-chrome
 ignoreHttpsErrors | boolean | `false` | Ignores possible HTTPS errors when navigating to a page.
 scrollPage | boolean | `false` | Scroll page down before rendering to trigger lazy loading elements.
 waitFor | number or string | - | Number in ms to wait before render or selector element to wait before render.
+attachmentName | string | - | When set, the `content-disposition` headers are set and browser will download the PDF instead of showing inline. The given string will be used as the name for the file.
 viewport.width | number | `1600` | Viewport width.
 viewport.height | number | `1200` | Viewport height.
 viewport.deviceScaleFactor | number | `1` | Device scale factor (could be thought of as dpr).
@@ -167,9 +184,7 @@ cookies[0][httpOnly] | boolean | - | Cookie httpOnly
 cookies[0][secure] | boolean | - | Cookie secure
 cookies[0][sameSite] | string | - | `Strict` or `Lax`
 goto.timeout | number | `30000` |  Maximum navigation time in milliseconds, defaults to 30 seconds, pass 0 to disable timeout.
-goto.waitUntil | string | `networkidle` | When to consider navigation succeeded. Options: `load`, `networkidle`. `load` = consider navigation to be finished when the load event is fired. `networkidle` = consider navigation to be finished when the network activity stays "idle" for at least `goto.networkIdleTimeout` ms.
-goto.networkIdleInflight | number | `2` | Maximum amount of inflight requests which are considered "idle". Takes effect only with `goto.waitUntil`: 'networkidle' parameter.
-goto.networkIdleTimeout | number | `2000` | A timeout to wait before completing navigation. Takes effect only with waitUntil: 'networkidle' parameter.
+goto.waitUntil | string | `networkidle0` | When to consider navigation succeeded. Options: `load`, `domcontentloaded`, `networkidle0`, `networkidle2`. `load` - consider navigation to be finished when the load event is fired. `domcontentloaded` - consider navigation to be finished when the `DOMContentLoaded` event is fired. `networkidle0` - consider navigation to be finished when there are no more than 0 network connections for at least `500` ms. `networkidle2` - consider navigation to be finished when there are no more than 2 network connections for at least `500` ms.
 pdf.scale | number | `1` | Scale of the webpage rendering.
 pdf.printBackground | boolean | `false`| Print background graphics.
 pdf.displayHeaderFooter | boolean | `false` | Display header and footer.
@@ -180,6 +195,7 @@ pdf.pageRanges | string | - | Paper ranges to print, e.g., '1-5, 8, 11-13'. Defa
 pdf.format | string | `A4` | Paper format. If set, takes priority over width or height options.
 pdf.width | string | - | Paper width, accepts values labeled with units.
 pdf.height | string | - | Paper height, accepts values labeled with units.
+pdf.fullPage | boolean | - | Create PDF in a single page
 pdf.margin.top | string | - | Top margin, accepts values labeled with units.
 pdf.margin.right | string | - | Right margin, accepts values labeled with units.
 pdf.margin.bottom | string | - | Bottom margin, accepts values labeled with units.
@@ -192,6 +208,7 @@ screenshot.clip.x | number | - | Specifies x-coordinate of top-left corner of cl
 screenshot.clip.y | number | - | Specifies y-coordinate of top-left corner of clipping region of the page.
 screenshot.clip.width | number | - | Specifies width of clipping region of the page.
 screenshot.clip.height | number | - | Specifies height of clipping region of the page.
+screenshot.selector | string | - | Specifies css selector to clip the screenshot to.
 
 
 **Example:**
@@ -256,11 +273,11 @@ The only required parameter is `url`.
 **Example:**
 
 ```bash
-curl -o google.pdf -XPOST -d'{"url": "http://google.com"}' -H"content-type: application/json" https://url-to-pdf-api.herokuapp.com/api/render
+curl -o google.pdf -XPOST -d'{"url": "http://google.com"}' -H"content-type: application/json" http://localhost:9000/api/render
 ```
 
 ```bash
-curl -o html.pdf -XPOST -d'{"html": "<body>test</body>"}' -H"content-type: application/json" https://url-to-pdf-api.herokuapp.com/api/render
+curl -o html.pdf -XPOST -d'{"html": "<body>test</body>"}' -H"content-type: application/json" http://localhost:9000/api/render
 ```
 
 ### POST /api/render - (HTML)
@@ -275,7 +292,15 @@ paremeter.
 
 ```bash
 curl -o receipt.html https://rawgit.com/wildbit/postmark-templates/master/templates_inlined/receipt.html
-curl -o html.pdf -XPOST -d@receipt.html -H"content-type: text/html" https://url-to-pdf-api.herokuapp.com/api/render?pdf.scale=1
+curl -o html.pdf -XPOST -d@receipt.html -H"content-type: text/html" http://localhost:9000/api/render?pdf.scale=1
+```
+
+### GET /healthcheck
+
+Health check endpoint used for monitoring if the service is still up and running.
+
+```bash
+curl -XGET http://localhost:9000/healthcheck
 ```
 
 ## Development
@@ -301,9 +326,6 @@ First, clone the repository and cd into it.
 
 * `cp .env.sample .env`
 * Fill in the blanks in `.env`
-* `source .env` or `bash .env`
-
-  Or use [autoenv](https://github.com/kennethreitz/autoenv).
 
 * `npm install`
 * `npm start` Start express server locally
