@@ -8,6 +8,7 @@ async function createBrowser(opts) {
   const browserOpts = {
     ignoreHTTPSErrors: opts.ignoreHttpsErrors,
     sloMo: config.DEBUG_MODE ? 250 : undefined,
+    protocolTimeout: 30 * 60 * 1000,
   };
   if (config.BROWSER_WS_ENDPOINT) {
     browserOpts.browserWSEndpoint = config.BROWSER_WS_ENDPOINT;
