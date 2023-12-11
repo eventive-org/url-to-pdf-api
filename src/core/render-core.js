@@ -56,6 +56,7 @@ async function render(_opts = {}) {
     pdf: {
       format: 'A4',
       printBackground: true,
+      timeout: 30 * 60 * 1000,
     },
     screenshot: {
       type: 'png',
