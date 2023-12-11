@@ -1,23 +1,20 @@
-FROM browserless/chrome:latest
+FROM ghcr.io/puppeteer/puppeteer:21.6.0
 
-ENV BROWSER_EXECUTABLE_PATH=$CHROME_PATH
 ENV PORT=9000
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
 
 USER root
 
-RUN addgroup app && \ 
-    useradd --gid app --shell /bin/bash --create-home app
+USER pptruser
 
-USER app
-
-WORKDIR /home/app
+WORKDIR /home/pptruser
 
 RUN git clone --depth 1 https://github.com/eventive-org/_fonts.git && \
-    bash ./_fonts/bin/compile /home/app
+    bash ./_fonts/bin/compile /home/pptruser
 
 WORKDIR /app
 
-COPY --chown=app:app . .
+COPY --chown=pptruser:pptruser . .
 
 RUN npm install --only=production
 
