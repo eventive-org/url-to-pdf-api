@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "env-cmd nodemon --watch ./src -e js src/index.js",
+    "heroku-postbuild": "mkdir ./.cache && mv /app/.cache/puppeteer ./.cache",
     "test": "mocha --timeout 10000 && npm run lint",
     "lint": "eslint ."
   },
