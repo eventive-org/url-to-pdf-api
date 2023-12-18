@@ -125,6 +125,9 @@ async function render(_opts = {}) {
 
     if (_.isString(opts.html)) {
       logger.info('Set HTML ..');
+      await page.setExtraHTTPHeaders({
+        'Content-Type': 'text/html; charset=utf-8',
+      });
       await page.setContent(opts.html, opts.goto);
     } else {
       logger.info(`Goto url ${opts.url} ..`);
