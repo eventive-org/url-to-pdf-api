@@ -12,6 +12,9 @@ WORKDIR /home/pptruser
 RUN git clone --depth 1 https://github.com/eventive-org/_fonts.git && \
     bash ./_fonts/bin/compile /home/pptruser
 
+RUN git clone --depth 1 https://github.com/debitoor/heroku-buildpack-converter-fonts.git && \
+    bash ./heroku-buildpack-converter-fonts/bin/compile /home/pptruser
+
 WORKDIR /app
 
 COPY --chown=pptruser:pptruser . .
