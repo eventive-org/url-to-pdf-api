@@ -2,7 +2,6 @@ const puppeteer = require('puppeteer');
 const _ = require('lodash');
 const config = require('../config');
 const logger = require('../util/logger')(__filename);
-const he = require('he');
 
 
 async function createBrowser(opts) {
@@ -129,9 +128,7 @@ async function render(_opts = {}) {
       await page.setExtraHTTPHeaders({
         'Content-Type': 'text/html; charset=utf-8',
       });
-
-      const encodedHtml = he.encode(opts.html);
-      await page.setContent(encodedHtml, opts.goto);
+      await page.setContent(opts.html, opts.goto);
     } else {
       logger.info(`Goto url ${opts.url} ..`);
       await page.goto(opts.url, opts.goto);
