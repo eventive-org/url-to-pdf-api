@@ -128,7 +128,7 @@ async function render(_opts = {}) {
       await page.setExtraHTTPHeaders({
         'Content-Type': 'text/html; charset=utf-8',
       });
-      await page.setContent(opts.html, opts.goto);
+      await page.setContent(encodeURIComponent(opts.html), opts.goto);
     } else {
       logger.info(`Goto url ${opts.url} ..`);
       await page.goto(opts.url, opts.goto);
